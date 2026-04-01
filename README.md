@@ -1,5 +1,5 @@
 <p>
-  <strong>[WARNING]</strong>&nbsp;This plugin is in the BETA phase and may contain bugs. I originally created this
+  <strong>[WARNING]</strong>&nbsp;This script is in the BETA phase and may contain bugs. I originally created this
   plugin for my own use but I&rsquo;ve decided to continue developing it with community support. Thank you for your
   understanding.<br /><br />Hey everyone,<br /><br />Faction chat is the heart of Torn, but the default UI is missing
   some serious quality-of-life features. Over the past while, I've been developing and refining a script to completely
