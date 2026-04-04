@@ -1,3 +1,6 @@
+https://www.torn.com/forums.php#/p=threads&f=67&t=16552267&b=0&a=0
+
+
 <div
   style="max-width: 850px; margin: 0 auto; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #cfd8dc; line-height: 1.6; background-color: #171a21; padding: 20px; border-radius: 12px; border: 1px solid #2a303c;"
 >
