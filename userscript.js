@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Better Faction Chat – Torn.com
 // @namespace    https://torn.com/
-// @version      1.4.7
+// @version      1.4.11
 // @description  Activity status, rank icons, travel icons, @mention autocomplete, fixed search, real timestamps – by sercann
 // @author       sercann
 // @match        https://www.torn.com/*
@@ -10,14 +10,14 @@
 // @grant        GM_addStyle
 // @run-at       document-idle
 // @license      MIT
-// @downloadURL https://update.greasyfork.org/scripts/572030/Better%20Faction%20Chat%20%E2%80%93%20Torncom.user.js
-// @updateURL https://update.greasyfork.org/scripts/572030/Better%20Faction%20Chat%20%E2%80%93%20Torncom.meta.js
+// @downloadURL  https://update.greasyfork.org/scripts/572030/Better%20Faction%20Chat%20%E2%80%93%20Torncom.user.js
+// @updateURL    https://update.greasyfork.org/scripts/572030/Better%20Faction%20Chat%20%E2%80%93%20Torncom.meta.js
 // ==/UserScript==
 
 (function () {
     'use strict';
 
-    const BFC_VERSION = '1.4.7';
+    const BFC_VERSION = '1.4.11';
     const STORE_KEY   = 'bfc_settings_v2';
     const API_BASE    = 'https://api.torn.com';
 
@@ -38,7 +38,7 @@
 
     function loadCfg() {
         let raw = null;
-        
+
         try { if (typeof GM_getValue !== 'undefined') raw = GM_getValue(STORE_KEY, null); } catch(e) {}
         try { if (!raw && typeof window.localStorage !== 'undefined') raw = window.localStorage.getItem(STORE_KEY); } catch(e) {}
         try {
@@ -49,14 +49,14 @@
         } catch(e) {}
 
         if (!raw) return Object.assign({}, DEFAULTS);
-        
+
         try {
             const saved = JSON.parse(raw);
             return Object.assign({}, DEFAULTS, saved, {
                 statusColors: Object.assign({}, DEFAULTS.statusColors, saved.statusColors || {})
             });
-        } catch(e) { 
-            return Object.assign({}, DEFAULTS); 
+        } catch(e) {
+            return Object.assign({}, DEFAULTS);
         }
     }
 
@@ -483,6 +483,31 @@
     }
 
     const processedMsgFps = new Set();
+    const MENTION_STORE_KEY = 'bfc_mentions_history';
+    let mentionedFps = new Set();
+
+    try {
+        let sm = null;
+        if (typeof window.localStorage !== 'undefined') sm = window.localStorage.getItem(MENTION_STORE_KEY);
+        if (!sm) {
+            const match = document.cookie.match(new RegExp('(^| )' + MENTION_STORE_KEY + '=([^;]+)'));
+            if (match) sm = decodeURIComponent(match[2]);
+        }
+        if (sm) {
+            const arr = JSON.parse(sm);
+            if (Array.isArray(arr)) mentionedFps = new Set(arr);
+        }
+    } catch(e) {}
+
+    function saveMentionFp(fp) {
+        mentionedFps.add(fp);
+        try {
+            const arr = Array.from(mentionedFps).slice(-50);
+            const raw = JSON.stringify(arr);
+            if (typeof window.localStorage !== 'undefined') window.localStorage.setItem(MENTION_STORE_KEY, raw);
+            document.cookie = MENTION_STORE_KEY + "=" + encodeURIComponent(raw) + "; max-age=31536000; path=/;";
+        } catch(e) {}
+    }
 
     function getMsgFingerprint(msgEl) {
         const sender = (findNameEl(msgEl)?.textContent || '').trim().replace(/[:\s]+$/, '').slice(0, 30);
@@ -520,25 +545,43 @@
         if (label) label.textContent = n === 1 ? 'You were mentioned — click to jump' : `Mentioned ${n}× · ${mentionIdx + 1}/${n}`;
     }
 
-    function checkMention(msgEl) {
+    function checkMention(msgEl, fp, isNew) {
         if (!CFG.mentionEnabled || !CFG.username) return;
-        if (new RegExp('@' + escRx(CFG.username) + '\\b', 'i').test(msgEl.textContent)) {
+
+        const hasMention = new RegExp('@' + escRx(CFG.username) + '\\b', 'i').test(msgEl.textContent);
+
+        if (isNew && hasMention) {
+            if (!mentionedFps.has(fp)) {
+                saveMentionFp(fp);
+                mentionStack.push({ fp: fp, el: msgEl });
+                refreshBar();
+            }
+        }
+
+        if (mentionedFps.has(fp)) {
             msgEl.classList.add('bfc-mentioned');
-            mentionStack.push(msgEl);
-            refreshBar();
+            const stackItem = mentionStack.find(m => m.fp === fp);
+            if (stackItem) stackItem.el = msgEl;
         }
     }
 
     function jumpMention(dir) {
         if (!mentionStack.length) return;
         mentionIdx = (mentionIdx + dir + mentionStack.length) % mentionStack.length;
-        const el = mentionStack[mentionIdx];
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        el.classList.add('bfc-jump-outline');
-        setTimeout(() => el.classList.remove('bfc-jump-outline'), 1800);
+        const target = mentionStack[mentionIdx].el;
+        if (target && target.isConnected) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            target.classList.add('bfc-jump-outline');
+            setTimeout(() => { if (target) target.classList.remove('bfc-jump-outline'); }, 1800);
+        }
         refreshBar();
     }
-    function clearMentions() { mentionStack = []; mentionIdx = 0; refreshBar(); }
+
+    function clearMentions() {
+        mentionStack = [];
+        mentionIdx = 0;
+        refreshBar();
+    }
 
     let toolbar = null, statusPill = null, autoScrollOn = CFG.autoScroll;
 
@@ -796,10 +839,13 @@
         if (CFG.showTimestamps) injectTs(msgEl);
 
         const fp = getMsgFingerprint(msgEl);
-        if (!processedMsgFps.has(fp)) {
+        const isNew = !processedMsgFps.has(fp);
+
+        if (isNew) {
             processedMsgFps.add(fp);
-            checkMention(msgEl);
         }
+
+        checkMention(msgEl, fp, isNew);
 
         const bodyEl   = findBodyEl(msgEl);
         const bodyText = (bodyEl || msgEl).textContent.toLowerCase();
@@ -920,7 +966,6 @@
                 chatBoxEl = box;
                 msgListEl = findMsgList(box);
                 processedMsgs.length = 0;
-                processedMsgFps.clear();
                 buildMemberPopup();
                 if (CFG.apiKey && !pollTimer) startPoll();
             }
