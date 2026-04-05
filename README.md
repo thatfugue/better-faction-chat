@@ -118,7 +118,7 @@ https://www.torn.com/forums.php#/p=threads&f=67&t=16551924&b=0&a=0
         style="border-radius: 8px; border: 1px solid #2a303c;"
         src="https://editor.torn.com/5407d61c-a331-4de6-836f-35365a2f1554-4141121.png"
         alt="Screenshot 4"
-    /></a>f
+    /></a>
   </div>
   <div
     style="padding: 20px; border: 1px solid #2db4ff; background-color: rgba(45, 180, 255, 0.05); border-radius: 8px; margin-top: 40px; margin-bottom: 20px;"
@@ -155,7 +155,7 @@ https://www.torn.com/forums.php#/p=threads&f=67&t=16551924&b=0&a=0
   <div
     style="padding: 25px 20px; border: 1px solid #c0392b; background-color: rgba(192, 57, 43, 0.1); border-radius: 8px; margin-bottom: 20px; text-align: center;"
   >
-    <h3 style="margin-top: 0; color: #e74c3c; font-size: 22px;">💊 Buy Me a Coffee</h3>
+    <h3 style="margin-top: 0; color: #e74c3c; font-size: 22px;">💊 Buy Me a Coffee (Or a Xanax!)</h3>
     <p style="margin-bottom: 20px; font-size: 15px; color: #cfd8dc;">
       If you enjoy using this script and want to show some support, donations in the form of <strong>Xanax</strong>,
       EDVDs, or cash are highly appreciated! It keeps the energy up for future updates and helps me stay focused.
@@ -243,3 +243,4 @@ https://www.torn.com/forums.php#/p=threads&f=67&t=16551924&b=0&a=0
     </p>
   </div>
 </div>
+
