@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Better Faction Chat – Torn.com
 // @namespace    https://torn.com/
-// @version      1.4.11
+// @version      1.4.17
 // @description  Activity status, rank icons, travel icons, @mention autocomplete, fixed search, real timestamps – by sercann
 // @author       sercann
 // @match        https://www.torn.com/*
@@ -10,14 +10,14 @@
 // @grant        GM_addStyle
 // @run-at       document-idle
 // @license      MIT
-// @downloadURL  https://update.greasyfork.org/scripts/572030/Better%20Faction%20Chat%20%E2%80%93%20Torncom.user.js
-// @updateURL    https://update.greasyfork.org/scripts/572030/Better%20Faction%20Chat%20%E2%80%93%20Torncom.meta.js
+// @downloadURL https://update.greasyfork.org/scripts/572030/Better%20Faction%20Chat%20%E2%80%93%20Torncom.user.js
+// @updateURL https://update.greasyfork.org/scripts/572030/Better%20Faction%20Chat%20%E2%80%93%20Torncom.meta.js
 // ==/UserScript==
 
 (function () {
     'use strict';
 
-    const BFC_VERSION = '1.4.11';
+    const BFC_VERSION = '1.4.17';
     const STORE_KEY   = 'bfc_settings_v2';
     const API_BASE    = 'https://api.torn.com';
 
@@ -94,10 +94,10 @@
     }
 
     GM_addStyle(`
-        .bfc-dot { display:inline-block; width:7px; height:7px; border-radius:50%; margin:0 5px 0 2px; vertical-align:middle; flex-shrink:0; transition:background .35s,box-shadow .35s; cursor:pointer; }
-        .bfc-state-icon { font-size:12px; margin:0 4px; vertical-align:middle; cursor:pointer; line-height:1; }
+        .bfc-dot { display:inline-block; width:7px; height:7px; border-radius:50%; flex-shrink:0; transition:background .35s,box-shadow .35s; cursor:pointer; margin:0; padding:0; }
+        .bfc-state-icon { font-size:12px; cursor:pointer; line-height:1; margin:0; padding:0; display:inline-flex; align-items:center; }
         .bfc-state-icon:empty { display:none; }
-        .bfc-rank-icon { font-size:11px; margin:0 4px 0 2px; vertical-align:middle; cursor:pointer; line-height:1; opacity:.85; }
+        .bfc-rank-icon { font-size:11px; cursor:pointer; line-height:1; opacity:.85; margin:0; padding:0; display:inline-flex; align-items:center; }
         .bfc-rank-icon:empty { display:none; }
 
         .bfc-tip { position: relative; }
@@ -166,6 +166,10 @@
         #bfc-panel.bfc-open { display:flex; flex-direction:column; animation:bfc-fadein .18s ease; }
         #bfc-ph { display:flex; align-items:center; gap:8px; padding:14px 16px 12px; background:linear-gradient(135deg,#161b22,#1c2333); border-bottom:1px solid #21262d; flex-shrink:0; }
         #bfc-ph h3 { margin:0; font-size:14px; font-weight:700; color:${CFG.accentColor}; flex:1; }
+
+        #bfc-support-btn { background: rgba(255, 82, 82, 0.15); color: #ff5252; border: 1px solid rgba(255, 82, 82, 0.4); padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; text-decoration: none; transition: all 0.2s; display: inline-flex; align-items: center; gap: 4px; }
+        #bfc-support-btn:hover { background: #ff5252; color: #fff; box-shadow: 0 0 8px rgba(255, 82, 82, 0.6); }
+
         #bfc-pver { font-size:10px; color:#484f58; background:#161b22; border:1px solid #30363d; border-radius:20px; padding:1px 7px; }
         #bfc-pb { padding:14px 16px; max-height:70vh; overflow-y:auto; flex:1; }
         #bfc-pb::-webkit-scrollbar { width:4px; }
@@ -207,6 +211,36 @@
         #bfc-torn-restore-btn { display:block; width:100%; margin-top:10px; padding:7px 10px; background:#1a2535; border:1px solid ${CFG.accentColor}66; border-radius:4px; color:${CFG.accentColor}; font-size:12px; font-weight:600; cursor:pointer; text-align:center; box-sizing:border-box; transition:background .15s,border-color .15s; }
         #bfc-torn-restore-btn:hover { background:#1e3050; border-color:${CFG.accentColor}; }
     `);
+
+    function protectNode(node) {
+        if (!node || node.dataset.bfcProtected) return;
+        node.dataset.bfcProtected = '1';
+
+        const origRemove = node.removeChild;
+        node.removeChild = function(child) {
+            if (child && child.classList && (
+                child.classList.contains('bfc-icons-wrapper') ||
+                child.classList.contains('bfc-ts') ||
+                child.classList.contains('bfc-cp-btn')
+            )) {
+                return child;
+            }
+            return origRemove.call(this, child);
+        };
+
+        const origReplace = node.replaceChild;
+        node.replaceChild = function(newChild, oldChild) {
+            if (oldChild && oldChild.classList && (
+                oldChild.classList.contains('bfc-icons-wrapper') ||
+                oldChild.classList.contains('bfc-ts') ||
+                oldChild.classList.contains('bfc-cp-btn')
+            )) {
+                this.insertBefore(newChild, oldChild);
+                return oldChild;
+            }
+            return origReplace.call(this, newChild, oldChild);
+        };
+    }
 
     function findMsgList(root) {
         return root.querySelector('[class*="scrollWrapper__"]') || root;
@@ -302,9 +336,24 @@
         el.textContent = getRankIcon(info.position, info.name);
         el.setAttribute('data-bfc-title', getRankTitle(info.position, info.name));
     }
-    function injectIndicators(nameEl, lcName) {
-        if (nameEl.querySelector('.bfc-dot')) return;
+
+    function injectIndicators(msgEl, lcName) {
+        if (msgEl.dataset.bfcInd) return;
+        msgEl.dataset.bfcInd = '1';
+
+        const senderContainer = msgEl.querySelector('[class*="senderContainer__"]');
+        if (!senderContainer) return;
+
         const id = nameIndex[lcName], info = id ? memberCache[id] : null;
+
+        const wrapper = document.createElement('span');
+        wrapper.className = 'bfc-icons-wrapper';
+        wrapper.style.display = 'inline-flex';
+        wrapper.style.alignItems = 'center';
+        wrapper.style.gap = '4px';
+        wrapper.style.margin = '0 4px 0 0';
+        wrapper.style.order = '-1';
+        wrapper.style.flexShrink = '0';
 
         const dot = document.createElement('span');
         dot.className = 'bfc-dot bfc-tip'; dot.dataset.bfcFor = lcName; refreshDot(dot, info);
@@ -318,10 +367,13 @@
         rankIcon.className = 'bfc-rank-icon bfc-tip'; rankIcon.dataset.bfcRankFor = lcName; refreshRankIcon(rankIcon, info);
         rankIcon.addEventListener('click', e => e.stopPropagation());
 
-        nameEl.prepend(rankIcon);
-        nameEl.prepend(stateIcon);
-        nameEl.prepend(dot);
+        wrapper.appendChild(dot);
+        wrapper.appendChild(stateIcon);
+        wrapper.appendChild(rankIcon);
+
+        senderContainer.insertAdjacentElement('beforebegin', wrapper);
     }
+
     function updateAllDots() {
         document.querySelectorAll('.bfc-dot[data-bfc-for]').forEach(dot => {
             const id = nameIndex[dot.dataset.bfcFor]; refreshDot(dot, id ? memberCache[id] : null);
@@ -560,6 +612,7 @@
 
         if (mentionedFps.has(fp)) {
             msgEl.classList.add('bfc-mentioned');
+            msgEl.dataset.bfcMentioned = '1';
             const stackItem = mentionStack.find(m => m.fp === fp);
             if (stackItem) stackItem.el = msgEl;
         }
@@ -822,18 +875,29 @@
         if (msgEl.dataset.bfcDone) return;
         msgEl.dataset.bfcDone = '1';
 
-        if (msgEl.parentElement && !msgEl.parentElement.classList.contains('bfc-msg-container')) {
-            const container = document.createElement('div');
-            container.className = 'bfc-msg-container';
-            msgEl.parentNode.insertBefore(container, msgEl);
-            container.appendChild(msgEl);
-            injectCopy(container, msgEl);
+        if (!msgEl.classList.contains('bfc-msg-container')) {
+            msgEl.classList.add('bfc-msg-container');
+            injectCopy(msgEl);
         }
+
+        const senderContainer = msgEl.querySelector('[class*="senderContainer__"]');
+        if (senderContainer) protectNode(senderContainer);
+
+        const bodyEl = msgEl.querySelector('[class*="body__"]');
+        if (bodyEl) protectNode(bodyEl);
 
         const nameEl = findNameEl(msgEl);
         if (nameEl) {
             const rawName = nameEl.textContent.trim().replace(/[:\s]+$/, '');
-            injectIndicators(nameEl, rawName.toLowerCase());
+            const lcName = rawName.toLowerCase();
+
+            const isSelf = (CFG.username && lcName === CFG.username.toLowerCase());
+            const box = msgEl.querySelector('[class*="box__"]');
+            const isLocalMessage = box && (box.className.includes('local') || box.className.includes('right'));
+
+            if (!isSelf && !isLocalMessage) {
+                injectIndicators(msgEl, lcName);
+            }
         }
 
         if (CFG.showTimestamps) injectTs(msgEl);
@@ -847,11 +911,12 @@
 
         checkMention(msgEl, fp, isNew);
 
-        const bodyEl   = findBodyEl(msgEl);
         const bodyText = (bodyEl || msgEl).textContent.toLowerCase();
         processedMsgs.push({ el: msgEl, bodyText });
 
         const tooltipObserver = new MutationObserver((mutations) => {
+            let domChanged = false;
+
             mutations.forEach(mut => {
                 if (mut.attributeName === 'aria-describedby') {
                     const tId = msgEl.getAttribute('aria-describedby');
@@ -862,9 +927,40 @@
                         } catch(e) {}
                     }
                 }
+                if (mut.type === 'childList') {
+                    domChanged = true;
+                }
             });
+
+            if (domChanged) {
+                if (!msgEl.querySelector('.bfc-icons-wrapper')) {
+                    const curNameEl = findNameEl(msgEl);
+                    if (curNameEl) {
+                        const rawName = curNameEl.textContent.trim().replace(/[:\s]+$/, '');
+                        const lcName = rawName.toLowerCase();
+
+                        const isSelf = (CFG.username && lcName === CFG.username.toLowerCase());
+                        const box = msgEl.querySelector('[class*="box__"]');
+                        const isLocalMessage = box && (box.className.includes('local') || box.className.includes('right'));
+
+                        if (!isSelf && !isLocalMessage) {
+                            msgEl.dataset.bfcInd = '';
+                            injectIndicators(msgEl, lcName);
+                        }
+                    }
+                }
+                if (CFG.showTimestamps && !msgEl.querySelector('.bfc-ts')) {
+                    injectTs(msgEl);
+                }
+                if (!msgEl.querySelector('.bfc-cp-btn')) {
+                    injectCopy(msgEl);
+                }
+                if (msgEl.dataset.bfcMentioned === '1' && !msgEl.classList.contains('bfc-mentioned')) {
+                    msgEl.classList.add('bfc-mentioned');
+                }
+            }
         });
-        tooltipObserver.observe(msgEl, { attributes: true, attributeFilter: ['aria-describedby'] });
+        tooltipObserver.observe(msgEl, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-describedby'] });
 
         if (autoScrollOn && msgListEl) {
             requestAnimationFrame(() => { msgListEl.scrollTop = msgListEl.scrollHeight; });
@@ -873,18 +969,21 @@
 
     function injectTs(msgEl) {
         if (msgEl.querySelector('.bfc-ts')) return;
+        const body = findBodyEl(msgEl);
+        if (!body) return;
+
         const label = getMsgTimestamp(msgEl);
         const ts = document.createElement('span');
         ts.className = 'bfc-ts'; ts.textContent = label; ts.title = 'TCT (UTC) time';
-        const sender = msgEl.querySelector('[class*="senderContainer__"]');
-        const body   = findBodyEl(msgEl);
-        if (sender && body) msgEl.insertBefore(ts, body);
-        else if (sender)    sender.insertAdjacentElement('afterend', ts);
-        else                msgEl.appendChild(ts);
+
+        body.insertAdjacentElement('afterbegin', ts);
     }
 
-    function injectCopy(container, msgEl) {
-        if (container.querySelector('.bfc-cp-btn')) return;
+    function injectCopy(msgEl) {
+        if (msgEl.querySelector('.bfc-cp-btn')) return;
+        const body = findBodyEl(msgEl);
+        if (!body) return;
+
         const btn = document.createElement('button');
         btn.className = 'bfc-cp-btn'; btn.title = 'Copy message text';
         const IC = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
@@ -892,12 +991,12 @@
         btn.innerHTML = IC;
         btn.addEventListener('click', e => {
             e.stopPropagation();
-            const body = findBodyEl(msgEl);
-            navigator.clipboard?.writeText((body || msgEl).textContent.trim()).catch(() => {});
+            navigator.clipboard?.writeText(body.textContent.trim()).catch(() => {});
             btn.innerHTML = IK;
             setTimeout(() => { btn.innerHTML = IC; }, 1400);
         });
-        container.appendChild(btn);
+
+        body.appendChild(btn);
     }
 
     let gearBtn = null;
@@ -991,6 +1090,7 @@
         panel.innerHTML = `
             <div id="bfc-ph">
                 <h3>⚡ Better Faction Chat</h3>
+                <a href="https://www.torn.com/profiles.php?XID=4141121" target="_blank" rel="noopener" id="bfc-support-btn" title="Send a tip in Torn!">💖 Support</a>
                 <span id="bfc-pver">v${BFC_VERSION}</span>
             </div>
             <div id="bfc-pb">
