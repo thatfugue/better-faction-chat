@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Better Faction Chat – Torn.com
 // @namespace    https://torn.com/
-// @version      1.4.18
+// @version      1.4.19
 // @description  Activity status, rank icons, travel icons, @mention autocomplete, fixed search, real timestamps – by sercann
 // @author       sercann
 // @match        https://www.torn.com/*
@@ -17,7 +17,7 @@
 (function () {
     'use strict';
 
-    const BFC_VERSION = '1.4.17';
+    const BFC_VERSION = '1.4.19';
     const STORE_KEY   = 'bfc_settings_v2';
     const API_BASE    = 'https://api.torn.com';
 
@@ -153,7 +153,8 @@
         .bfc-mp-hdr { padding:6px 12px 9px; color:#8b949e; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; border-bottom:1px solid #21262d; margin-bottom:4px; display:flex; gap:10px; }
         .bfc-mp-item { display:flex; align-items:center; padding:5px 12px; gap:5px; transition:background .1s; }
         .bfc-mp-item:hover { background:rgba(255,255,255,.04); }
-        .bfc-mp-name { flex:1; color:#cdd9e5; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .bfc-mp-name { flex:1; color:#cdd9e5; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-decoration:none; transition:color .15s; }
+        .bfc-mp-name:hover { color:${CFG.accentColor}; text-decoration:underline; }
         .bfc-mp-time { font-size:10px; color:#484f58; white-space:nowrap; }
         .bfc-mp-state { font-size:11px; flex-shrink:0; }
         .bfc-mp-rank { font-size:11px; flex-shrink:0; opacity:.8; }
@@ -297,7 +298,7 @@
             const rawState  = (m.status && m.status.state ? m.status.state : 'Okay').toLowerCase();
             const stateDesc = (m.status && m.status.description ? m.status.description : '');
             const position  = m.position || '';
-            memberCache[id] = { name: m.name, status, lastSeen: m.last_action ? m.last_action.timestamp : 0, state: rawState, stateDesc, position };
+            memberCache[id] = { id, name: m.name, status, lastSeen: m.last_action ? m.last_action.timestamp : 0, state: rawState, stateDesc, position };
             nameIndex[m.name.toLowerCase()] = id;
             counts[status]++;
         });
@@ -779,7 +780,12 @@
         memberPopup.classList.toggle('bfc-open', open);
         if (open) {
             const r = anchor.getBoundingClientRect();
-            memberPopup.style.left = Math.max(4, r.left) + 'px';
+            let leftPos = r.left;
+            const popupWidth = 270;
+            if (leftPos + popupWidth > window.innerWidth - 10) {
+                leftPos = window.innerWidth - popupWidth - 10;
+            }
+            memberPopup.style.left = Math.max(4, leftPos) + 'px';
             memberPopup.style.top  = Math.max(4, r.top - 10) + 'px';
             updateMemberPopup();
             requestAnimationFrame(() => {
@@ -810,7 +816,7 @@
                     <span class="bfc-dot" style="background:${dotColor(m.status)};box-shadow:${m.status!=='offline'?`0 0 4px ${dotColor(m.status)}`:'none'}"></span>
                     ${rankIcon  ? `<span class="bfc-mp-rank" title="${esc(rankTip)}">${rankIcon}</span>` : ''}
                     ${stateIcon ? `<span class="bfc-mp-state" title="${stateTip}">${stateIcon}</span>` : ''}
-                    <span class="bfc-mp-name" title="${esc(m.name)}">${esc(m.name)}</span>
+                    <a class="bfc-mp-name" href="https://www.torn.com/profiles.php?XID=${m.id}" target="_blank" rel="noopener noreferrer" title="${esc(m.name)}">${esc(m.name)}</a>
                     <span class="bfc-mp-time">${m.lastSeen ? timeAgo(m.lastSeen) : ''}</span>
                 </div>`;
             }).join('');
