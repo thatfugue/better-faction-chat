@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Better Faction Chat – Torn.com
 // @namespace    https://torn.com/
-// @version      1.4.19
+// @version      1.4.20
 // @description  Activity status, rank icons, travel icons, @mention autocomplete, fixed search, real timestamps – by sercann
 // @author       sercann
 // @match        https://www.torn.com/*
@@ -17,7 +17,7 @@
 (function () {
     'use strict';
 
-    const BFC_VERSION = '1.4.19';
+    const BFC_VERSION = '1.4.20';
     const STORE_KEY   = 'bfc_settings_v2';
     const API_BASE    = 'https://api.torn.com';
 
@@ -1103,7 +1103,7 @@
                 <span class="bfc-slbl">API Connection</span>
                 <div class="bfc-fld">
                     <label class="bfc-lbl">Torn API Key (Limited Access)</label>
-                    <input class="bfc-inp" type="password" id="s-key" placeholder="Paste your API key here…" value="${esc(CFG.apiKey)}">
+                    <input class="bfc-inp" type="text" id="s-key" placeholder="Paste your API key here…" value="${esc(CFG.apiKey)}">
                 </div>
                 <div class="bfc-user-row">
                     <span class="label">Detected username:</span>
