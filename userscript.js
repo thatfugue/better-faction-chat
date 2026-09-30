@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Better Faction Chat – Torn.com
 // @namespace    https://torn.com/
-// @version      1.4.20
+// @version      1.5
 // @description  Activity status, rank icons, travel icons, @mention autocomplete, fixed search, real timestamps – by sercann
 // @author       sercann
 // @match        https://www.torn.com/*
@@ -17,36 +17,36 @@
 (function () {
     'use strict';
 
-    const BFC_VERSION = '1.4.20';
-    const STORE_KEY   = 'bfc_settings_v2';
-    const API_BASE    = 'https://api.torn.com';
+    const BFC_VERSION = '1.5';
+    const STORE_KEY = 'bfc_settings_v2';
+    const API_BASE = 'https://api.torn.com';
 
     const DEFAULTS = {
-        apiKey:           '',
-        username:         '',
-        refreshInterval:  60,
-        showTimestamps:   true,
-        showTravelIcons:  true,
-        showRankIcons:    true,
-        autoScroll:       true,
-        mentionEnabled:   true,
-        hideGearBtn:      false,
+        apiKey: '',
+        username: '',
+        refreshInterval: 60,
+        showTimestamps: true,
+        showTravelIcons: true,
+        showRankIcons: true,
+        autoScroll: true,
+        mentionEnabled: true,
+        hideGearBtn: false,
         statusColors: { online: '#00e676', idle: '#ffab40', offline: '#546e7a' },
-        mentionColor:     '#ff5252',
-        accentColor:      '#29b6f6',
+        mentionColor: '#ff5252',
+        accentColor: '#29b6f6',
     };
 
     function loadCfg() {
         let raw = null;
 
-        try { if (typeof GM_getValue !== 'undefined') raw = GM_getValue(STORE_KEY, null); } catch(e) {}
-        try { if (!raw && typeof window.localStorage !== 'undefined') raw = window.localStorage.getItem(STORE_KEY); } catch(e) {}
+        try { if (typeof GM_getValue !== 'undefined') raw = GM_getValue(STORE_KEY, null); } catch (e) { }
+        try { if (!raw && typeof window.localStorage !== 'undefined') raw = window.localStorage.getItem(STORE_KEY); } catch (e) { }
         try {
             if (!raw) {
                 const match = document.cookie.match(new RegExp('(^| )' + STORE_KEY + '=([^;]+)'));
                 if (match) raw = decodeURIComponent(match[2]);
             }
-        } catch(e) {}
+        } catch (e) { }
 
         if (!raw) return Object.assign({}, DEFAULTS);
 
@@ -55,16 +55,16 @@
             return Object.assign({}, DEFAULTS, saved, {
                 statusColors: Object.assign({}, DEFAULTS.statusColors, saved.statusColors || {})
             });
-        } catch(e) {
+        } catch (e) {
             return Object.assign({}, DEFAULTS);
         }
     }
 
     function saveCfg(c) {
         const raw = JSON.stringify(c);
-        try { if (typeof GM_setValue !== 'undefined') GM_setValue(STORE_KEY, raw); } catch(e) {}
-        try { if (typeof window.localStorage !== 'undefined') window.localStorage.setItem(STORE_KEY, raw); } catch(e) {}
-        try { document.cookie = STORE_KEY + "=" + encodeURIComponent(raw) + "; max-age=31536000; path=/;"; } catch(e) {}
+        try { if (typeof GM_setValue !== 'undefined') GM_setValue(STORE_KEY, raw); } catch (e) { }
+        try { if (typeof window.localStorage !== 'undefined') window.localStorage.setItem(STORE_KEY, raw); } catch (e) { }
+        try { document.cookie = STORE_KEY + "=" + encodeURIComponent(raw) + "; max-age=31536000; path=/;"; } catch (e) { }
     }
 
     let CFG = loadCfg();
@@ -75,10 +75,10 @@
     };
 
     const RANK_ICONS = {
-        leader:       '👑',
-        'co-leader':  '⭐',
-        'coleader':   '⭐',
-        'co leader':  '⭐',
+        leader: '👑',
+        'co-leader': '⭐',
+        'coleader': '⭐',
+        'co leader': '⭐',
     };
     const RANK_ICON_DEFAULT = '⚔️';
 
@@ -142,8 +142,8 @@
 
         .bfc-ts { font-size:10px; color:#666; margin:0 8px 0 4px; font-variant-numeric:tabular-nums; display:inline-block; vertical-align:middle; pointer-events:none; font-family:monospace; }
 
-        .bfc-msg-container { position:relative!important; padding-right:26px!important; }
-        .bfc-cp-btn { position:absolute; right:2px; top:50%; transform:translateY(-50%); background:#2d2d2d; border:1px solid #444; border-radius:4px; color:#888; width:22px; height:22px; cursor:pointer; display:none; align-items:center; justify-content:center; flex-shrink:0; transition:all .15s; z-index:10; }
+        .bfc-msg-container { position:relative!important; }
+        .bfc-cp-btn { background:#2d2d2d; border:1px solid #444; border-radius:4px; color:#888; width:22px; height:22px; cursor:pointer; display:none; align-items:center; justify-content:center; flex-shrink:0; transition:all .15s; z-index:10; margin-left:6px; vertical-align:middle; position:relative; top:-1px; }
         .bfc-cp-btn:hover { background:#444; color:#fff; border-color:#666; }
         .bfc-msg-container:hover .bfc-cp-btn { display:inline-flex; }
 
@@ -218,7 +218,7 @@
         node.dataset.bfcProtected = '1';
 
         const origRemove = node.removeChild;
-        node.removeChild = function(child) {
+        node.removeChild = function (child) {
             if (child && child.classList && (
                 child.classList.contains('bfc-icons-wrapper') ||
                 child.classList.contains('bfc-ts') ||
@@ -230,7 +230,7 @@
         };
 
         const origReplace = node.replaceChild;
-        node.replaceChild = function(newChild, oldChild) {
+        node.replaceChild = function (newChild, oldChild) {
             if (oldChild && oldChild.classList && (
                 oldChild.classList.contains('bfc-icons-wrapper') ||
                 oldChild.classList.contains('bfc-ts') ||
@@ -247,10 +247,10 @@
         return root.querySelector('[class*="scrollWrapper__"]') || root;
     }
     function findMsgItems(root) {
-        const boxes = root.querySelectorAll('[class*="box__"]');
-        if (boxes.length > 0) return Array.from(boxes);
         const vItems = root.querySelectorAll('[class*="virtualItem__"]');
         if (vItems.length > 0) return Array.from(vItems);
+        const boxes = root.querySelectorAll('[class*="box__"]');
+        if (boxes.length > 0) return Array.from(boxes);
         return [];
     }
     function findNameEl(msgEl) {
@@ -295,9 +295,9 @@
         Object.entries(d.members).forEach(([id, m]) => {
             const rawStatus = (m.last_action && m.last_action.status ? m.last_action.status : 'Offline').toLowerCase();
             const status = rawStatus === 'online' ? 'online' : rawStatus === 'idle' ? 'idle' : 'offline';
-            const rawState  = (m.status && m.status.state ? m.status.state : 'Okay').toLowerCase();
+            const rawState = (m.status && m.status.state ? m.status.state : 'Okay').toLowerCase();
             const stateDesc = (m.status && m.status.description ? m.status.description : '');
-            const position  = m.position || '';
+            const position = m.position || '';
             memberCache[id] = { id, name: m.name, status, lastSeen: m.last_action ? m.last_action.timestamp : 0, state: rawState, stateDesc, position };
             nameIndex[m.name.toLowerCase()] = id;
             counts[status]++;
@@ -316,14 +316,14 @@
 
     function dotColor(status) {
         return status === 'online' ? CFG.statusColors.online
-             : status === 'idle'   ? CFG.statusColors.idle
-             :                       CFG.statusColors.offline;
+            : status === 'idle' ? CFG.statusColors.idle
+                : CFG.statusColors.offline;
     }
     function refreshDot(dot, info) {
         if (!info) { dot.style.background = CFG.statusColors.offline; dot.style.boxShadow = 'none'; dot.setAttribute('data-bfc-title', 'Unknown'); return; }
         const color = dotColor(info.status);
         dot.style.background = color;
-        dot.style.boxShadow  = info.status !== 'offline' ? `0 0 5px ${color}` : 'none';
+        dot.style.boxShadow = info.status !== 'offline' ? `0 0 5px ${color}` : 'none';
         dot.setAttribute('data-bfc-title', capitalize(info.status) + (info.lastSeen ? ' · ' + timeAgo(info.lastSeen) : ''));
     }
     function refreshStateIcon(el, info) {
@@ -393,20 +393,20 @@
     let suggestIndex = 0;
 
     function setupMentionAutocomplete(chatBox) {
-        const textarea = chatBox.querySelector('textarea');
-        if (!textarea || textarea.dataset.bfcMentionBound) return;
+        const inputEl = chatBox.querySelector('textarea, input[type="text"]');
+        if (!inputEl || inputEl.dataset.bfcMentionBound) return;
 
-        textarea.dataset.bfcMentionBound = "1";
-        textarea.parentElement.style.position = 'relative';
+        inputEl.dataset.bfcMentionBound = "1";
+        inputEl.parentElement.style.position = 'relative';
 
         mentionSuggestPopup = document.createElement('div');
         mentionSuggestPopup.id = 'bfc-mention-popup';
-        textarea.parentElement.appendChild(mentionSuggestPopup);
+        inputEl.parentElement.appendChild(mentionSuggestPopup);
 
-        textarea.addEventListener('input', handleMentionInput);
-        textarea.addEventListener('keydown', handleMentionKeydown, true);
-        textarea.addEventListener('blur', () => setTimeout(closeMentionSuggest, 150));
-        textarea.addEventListener('click', handleMentionInput);
+        inputEl.addEventListener('input', handleMentionInput);
+        inputEl.addEventListener('keydown', handleMentionKeydown, true);
+        inputEl.addEventListener('blur', () => setTimeout(closeMentionSuggest, 150));
+        inputEl.addEventListener('click', handleMentionInput);
     }
 
     function handleMentionInput(e) {
@@ -471,7 +471,7 @@
         mentionSuggestPopup.classList.add('bfc-open');
 
         mentionSuggestPopup.querySelectorAll('.bfc-ms-item').forEach(el => {
-            el.addEventListener('click', function(e) {
+            el.addEventListener('click', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 applyMention(this.dataset.name);
@@ -519,7 +519,8 @@
 
         const newVal = val.slice(0, state.start) + '@' + name + ' ' + val.slice(state.end);
 
-        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
+        const proto = input.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(proto, "value").set;
         nativeInputValueSetter.call(input, newVal);
         input.dispatchEvent(new Event('input', { bubbles: true }));
 
@@ -550,7 +551,7 @@
             const arr = JSON.parse(sm);
             if (Array.isArray(arr)) mentionedFps = new Set(arr);
         }
-    } catch(e) {}
+    } catch (e) { }
 
     function saveMentionFp(fp) {
         mentionedFps.add(fp);
@@ -559,13 +560,13 @@
             const raw = JSON.stringify(arr);
             if (typeof window.localStorage !== 'undefined') window.localStorage.setItem(MENTION_STORE_KEY, raw);
             document.cookie = MENTION_STORE_KEY + "=" + encodeURIComponent(raw) + "; max-age=31536000; path=/;";
-        } catch(e) {}
+        } catch (e) { }
     }
 
     function getMsgFingerprint(msgEl) {
         const sender = (findNameEl(msgEl)?.textContent || '').trim().replace(/[:\s]+$/, '').slice(0, 30);
-        const body   = (findBodyEl(msgEl) || msgEl).textContent.trim().slice(0, 80);
-        const ts     = getMsgTimestamp(msgEl);
+        const body = (findBodyEl(msgEl) || msgEl).textContent.trim().slice(0, 80);
+        const ts = getMsgTimestamp(msgEl);
         return sender + '|' + ts + '|' + body;
     }
 
@@ -582,7 +583,7 @@
         notifyBar.addEventListener('click', e => {
             if (e.target.id === 'bfc-nb-dismiss') { clearMentions(); return; }
             if (e.target.id === 'bfc-prev-m') { jumpMention(-1); return; }
-            if (e.target.id === 'bfc-next-m') { jumpMention(1);  return; }
+            if (e.target.id === 'bfc-next-m') { jumpMention(1); return; }
             jumpMention(1);
         });
         container.insertBefore(notifyBar, container.firstChild);
@@ -643,7 +644,7 @@
         if (container.querySelector('#bfc-toolbar')) { toolbar = container.querySelector('#bfc-toolbar'); return; }
         toolbar = document.createElement('div');
         toolbar.id = 'bfc-toolbar';
-        const left  = document.createElement('div'); left.className  = 'bfc-tb-group';
+        const left = document.createElement('div'); left.className = 'bfc-tb-group';
         const right = document.createElement('div'); right.className = 'bfc-tb-group';
 
         const scrollBtn = mkBtn('⏬ Scroll', autoScrollOn ? 'bfc-tb-on' : '');
@@ -786,7 +787,7 @@
                 leftPos = window.innerWidth - popupWidth - 10;
             }
             memberPopup.style.left = Math.max(4, leftPos) + 'px';
-            memberPopup.style.top  = Math.max(4, r.top - 10) + 'px';
+            memberPopup.style.top = Math.max(4, r.top - 10) + 'px';
             updateMemberPopup();
             requestAnimationFrame(() => {
                 const h = memberPopup.offsetHeight;
@@ -802,19 +803,19 @@
             return (rank[a.status] - rank[b.status]) || a.name.localeCompare(b.name);
         });
         if (!entries.length) { memberPopup.innerHTML = '<div class="bfc-mp-hdr" style="border:none">No Data — Check API Key</div>'; return; }
-        const on  = entries.filter(e => e.status === 'online').length;
+        const on = entries.filter(e => e.status === 'online').length;
         const idl = entries.filter(e => e.status === 'idle').length;
         const off = entries.filter(e => e.status === 'offline').length;
         memberPopup.innerHTML =
             `<div class="bfc-mp-hdr"><span class="bfc-col-on">● ${on} Online</span><span class="bfc-col-idle">● ${idl} Idle</span><span class="bfc-col-off">● ${off} Offline</span></div>` +
             entries.map(m => {
                 const stateIcon = CFG.showTravelIcons ? (STATE_ICONS[m.state] || '') : '';
-                const rankIcon  = CFG.showRankIcons   ? getRankIcon(m.position, m.name) : '';
-                const stateTip  = stateIcon ? esc(m.stateDesc || capitalize(m.state)) : '';
-                const rankTip   = getRankTitle(m.position, m.name);
+                const rankIcon = CFG.showRankIcons ? getRankIcon(m.position, m.name) : '';
+                const stateTip = stateIcon ? esc(m.stateDesc || capitalize(m.state)) : '';
+                const rankTip = getRankTitle(m.position, m.name);
                 return `<div class="bfc-mp-item">
-                    <span class="bfc-dot" style="background:${dotColor(m.status)};box-shadow:${m.status!=='offline'?`0 0 4px ${dotColor(m.status)}`:'none'}"></span>
-                    ${rankIcon  ? `<span class="bfc-mp-rank" title="${esc(rankTip)}">${rankIcon}</span>` : ''}
+                    <span class="bfc-dot" style="background:${dotColor(m.status)};box-shadow:${m.status !== 'offline' ? `0 0 4px ${dotColor(m.status)}` : 'none'}"></span>
+                    ${rankIcon ? `<span class="bfc-mp-rank" title="${esc(rankTip)}">${rankIcon}</span>` : ''}
                     ${stateIcon ? `<span class="bfc-mp-state" title="${stateTip}">${stateIcon}</span>` : ''}
                     <a class="bfc-mp-name" href="https://www.torn.com/profiles.php?XID=${m.id}" target="_blank" rel="noopener noreferrer" title="${esc(m.name)}">${esc(m.name)}</a>
                     <span class="bfc-mp-time">${m.lastSeen ? timeAgo(m.lastSeen) : ''}</span>
@@ -834,8 +835,8 @@
                     if (!node) break;
                     const props = node.memoizedProps || node.pendingProps;
                     if (props) {
-                        if (props.message && typeof props.message.time === 'number')      { foundTs = props.message.time; break; }
-                        if (typeof props.time === 'number' && props.time > 1600000000)    { foundTs = props.time; break; }
+                        if (props.message && typeof props.message.time === 'number') { foundTs = props.message.time; break; }
+                        if (typeof props.time === 'number' && props.time > 1600000000) { foundTs = props.time; break; }
                         if (props.message && typeof props.message.timestamp === 'number') { foundTs = props.message.timestamp; break; }
                         if (typeof props.timestamp === 'number' && props.timestamp > 1e9) { foundTs = props.timestamp; break; }
                         const tooltips = [props.title, props.tooltip, props.text, props.label];
@@ -851,7 +852,7 @@
                 }
                 if (foundTs || strTime) break;
             }
-        } catch {}
+        } catch { }
         if (foundTs) {
             const d = new Date(foundTs < 1e12 ? foundTs * 1000 : foundTs);
             return pad2(d.getUTCHours()) + ':' + pad2(d.getUTCMinutes());
@@ -892,21 +893,22 @@
         const bodyEl = msgEl.querySelector('[class*="body__"]');
         if (bodyEl) protectNode(bodyEl);
 
+        const box = msgEl.querySelector('[class*="box__"]') || msgEl;
+        const isLocalMessage = box && (box.className.includes('local') || box.className.includes('right') || box.className.includes('self') || (box.parentElement && box.parentElement.className.includes('self')));
+
         const nameEl = findNameEl(msgEl);
         if (nameEl) {
             const rawName = nameEl.textContent.trim().replace(/[:\s]+$/, '');
             const lcName = rawName.toLowerCase();
 
             const isSelf = (CFG.username && lcName === CFG.username.toLowerCase());
-            const box = msgEl.querySelector('[class*="box__"]');
-            const isLocalMessage = box && (box.className.includes('local') || box.className.includes('right'));
 
             if (!isSelf && !isLocalMessage) {
                 injectIndicators(msgEl, lcName);
             }
         }
 
-        if (CFG.showTimestamps) injectTs(msgEl);
+        if (CFG.showTimestamps && !isLocalMessage) injectTs(msgEl);
 
         const fp = getMsgFingerprint(msgEl);
         const isNew = !processedMsgFps.has(fp);
@@ -924,13 +926,13 @@
             let domChanged = false;
 
             mutations.forEach(mut => {
-                if (mut.attributeName === 'aria-describedby') {
+                if (mut.attributeName === 'aria-describedby' || mut.attributeName === 'data-is-tooltip-opened') {
                     const tId = msgEl.getAttribute('aria-describedby');
                     if (tId && !msgEl.dataset.ttHidden) {
                         msgEl.dataset.ttHidden = tId;
                         try {
                             killerStyle.sheet.insertRule(`[id="${tId}"] { display: none !important; opacity: 0 !important; visibility: hidden !important; pointer-events: none !important; }`, killerStyle.sheet.cssRules.length);
-                        } catch(e) {}
+                        } catch (e) { }
                     }
                 }
                 if (mut.type === 'childList') {
@@ -946,8 +948,8 @@
                         const lcName = rawName.toLowerCase();
 
                         const isSelf = (CFG.username && lcName === CFG.username.toLowerCase());
-                        const box = msgEl.querySelector('[class*="box__"]');
-                        const isLocalMessage = box && (box.className.includes('local') || box.className.includes('right'));
+                        const box = msgEl.querySelector('[class*="box__"]') || msgEl;
+                        const isLocalMessage = box && (box.className.includes('local') || box.className.includes('right') || box.className.includes('self') || (box.parentElement && box.parentElement.className.includes('self')));
 
                         if (!isSelf && !isLocalMessage) {
                             msgEl.dataset.bfcInd = '';
@@ -955,7 +957,9 @@
                         }
                     }
                 }
-                if (CFG.showTimestamps && !msgEl.querySelector('.bfc-ts')) {
+                const obsBox = msgEl.querySelector('[class*="box__"]') || msgEl;
+                const obsIsLocalMessage = obsBox && (obsBox.className.includes('local') || obsBox.className.includes('right') || obsBox.className.includes('self') || (obsBox.parentElement && obsBox.parentElement.className.includes('self')));
+                if (CFG.showTimestamps && !obsIsLocalMessage && !msgEl.querySelector('.bfc-ts')) {
                     injectTs(msgEl);
                 }
                 if (!msgEl.querySelector('.bfc-cp-btn')) {
@@ -966,7 +970,7 @@
                 }
             }
         });
-        tooltipObserver.observe(msgEl, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-describedby'] });
+        tooltipObserver.observe(msgEl, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-describedby', 'data-is-tooltip-opened'] });
 
         if (autoScrollOn && msgListEl) {
             requestAnimationFrame(() => { msgListEl.scrollTop = msgListEl.scrollHeight; });
@@ -997,7 +1001,9 @@
         btn.innerHTML = IC;
         btn.addEventListener('click', e => {
             e.stopPropagation();
-            navigator.clipboard?.writeText(body.textContent.trim()).catch(() => {});
+            const clone = body.cloneNode(true);
+            clone.querySelectorAll('.bfc-ts, .bfc-cp-btn').forEach(el => el.remove());
+            navigator.clipboard?.writeText(clone.textContent.trim()).catch(() => { });
             btn.innerHTML = IK;
             setTimeout(() => { btn.innerHTML = IC; }, 1400);
         });
@@ -1063,7 +1069,7 @@
         chatScanner = setInterval(() => {
             tryInjectRestoreBtn();
 
-            const box = document.querySelector('#chatRoot [id^="faction-"]');
+            const box = document.querySelector('#chatRoot [id^="faction-"], #faction');
             if (!box || box.style.display === 'none' || box.offsetParent === null) {
                 chatBoxEl = null; msgListEl = null; return;
             }
@@ -1122,7 +1128,7 @@
                 <span class="bfc-slbl">@Mention System</span>
                 <div class="bfc-row">
                     <span>🔔 Enable @mention detection</span>
-                    <label class="bfc-sw"><input type="checkbox" id="s-men"${CFG.mentionEnabled?' checked':''}><span class="bfc-swt"></span></label>
+                    <label class="bfc-sw"><input type="checkbox" id="s-men"${CFG.mentionEnabled ? ' checked' : ''}><span class="bfc-swt"></span></label>
                 </div>
                 <p class="bfc-mention-note">Only detects mentions while faction chat is open. Deduplication prevents re-triggers on scroll or chat reopen.</p>
 
@@ -1130,26 +1136,26 @@
                 <span class="bfc-slbl">Display</span>
                 <div class="bfc-row">
                     <span>⏱ Show message timestamps (TCT)</span>
-                    <label class="bfc-sw"><input type="checkbox" id="s-ts"${CFG.showTimestamps?' checked':''}><span class="bfc-swt"></span></label>
+                    <label class="bfc-sw"><input type="checkbox" id="s-ts"${CFG.showTimestamps ? ' checked' : ''}><span class="bfc-swt"></span></label>
                 </div>
                 <div class="bfc-row">
                     <span>✈️ Show travel &amp; state icons</span>
-                    <label class="bfc-sw"><input type="checkbox" id="s-travel"${CFG.showTravelIcons?' checked':''}><span class="bfc-swt"></span></label>
+                    <label class="bfc-sw"><input type="checkbox" id="s-travel"${CFG.showTravelIcons ? ' checked' : ''}><span class="bfc-swt"></span></label>
                 </div>
                 <div class="bfc-row">
                     <span>⚔️ Show faction rank icons</span>
-                    <label class="bfc-sw"><input type="checkbox" id="s-rank"${CFG.showRankIcons?' checked':''}><span class="bfc-swt"></span></label>
+                    <label class="bfc-sw"><input type="checkbox" id="s-rank"${CFG.showRankIcons ? ' checked' : ''}><span class="bfc-swt"></span></label>
                 </div>
                 <div class="bfc-row">
                     <span>⏬ Auto-scroll to newest message</span>
-                    <label class="bfc-sw"><input type="checkbox" id="s-asc"${CFG.autoScroll?' checked':''}><span class="bfc-swt"></span></label>
+                    <label class="bfc-sw"><input type="checkbox" id="s-asc"${CFG.autoScroll ? ' checked' : ''}><span class="bfc-swt"></span></label>
                 </div>
 
                 <hr class="bfc-div">
                 <span class="bfc-slbl">Interface</span>
                 <div class="bfc-row">
                     <span>🙈 Hide this settings button</span>
-                    <label class="bfc-sw"><input type="checkbox" id="s-hide"${CFG.hideGearBtn?' checked':''}><span class="bfc-swt"></span></label>
+                    <label class="bfc-sw"><input type="checkbox" id="s-hide"${CFG.hideGearBtn ? ' checked' : ''}><span class="bfc-swt"></span></label>
                 </div>
                 <p class="bfc-mention-note">When hidden, an "Open BFC Settings" button appears inside Torn's own chat settings panel (⚙ icon at the bottom of the chat).</p>
 
@@ -1190,26 +1196,26 @@
                 saveCfg(CFG);
                 setMsg(`✓ Connected as: ${d.name}`, true);
                 btn.textContent = '✓ Key valid';
-            } catch(e) {
+            } catch (e) {
                 setMsg(`✗ ${e.message}`, false);
                 btn.textContent = '🔑 Test Key & Auto-detect Username';
             }
         });
 
         document.getElementById('bfc-save-btn').addEventListener('click', () => {
-            CFG.apiKey          = document.getElementById('s-key').value.trim();
+            CFG.apiKey = document.getElementById('s-key').value.trim();
             CFG.refreshInterval = Math.max(30, parseInt(document.getElementById('s-ref').value) || 60);
-            CFG.mentionEnabled  = document.getElementById('s-men').checked;
-            CFG.showTimestamps  = document.getElementById('s-ts').checked;
+            CFG.mentionEnabled = document.getElementById('s-men').checked;
+            CFG.showTimestamps = document.getElementById('s-ts').checked;
             CFG.showTravelIcons = document.getElementById('s-travel').checked;
-            CFG.showRankIcons   = document.getElementById('s-rank').checked;
-            CFG.autoScroll      = document.getElementById('s-asc').checked;
-            CFG.hideGearBtn     = document.getElementById('s-hide').checked;
-            CFG.statusColors.online  = document.getElementById('s-con').value;
-            CFG.statusColors.idle    = document.getElementById('s-cid').value;
+            CFG.showRankIcons = document.getElementById('s-rank').checked;
+            CFG.autoScroll = document.getElementById('s-asc').checked;
+            CFG.hideGearBtn = document.getElementById('s-hide').checked;
+            CFG.statusColors.online = document.getElementById('s-con').value;
+            CFG.statusColors.idle = document.getElementById('s-cid').value;
             CFG.statusColors.offline = document.getElementById('s-cof').value;
-            CFG.mentionColor    = document.getElementById('s-cme').value;
-            CFG.accentColor     = document.getElementById('s-cac').value;
+            CFG.mentionColor = document.getElementById('s-cme').value;
+            CFG.accentColor = document.getElementById('s-cac').value;
 
             autoScrollOn = CFG.autoScroll;
             saveCfg(CFG);
@@ -1232,12 +1238,12 @@
         if (!ts) return '';
         const d = Math.floor(Date.now() / 1000 - ts);
         if (d < 5) return 'now'; if (d < 60) return d + 's';
-        if (d < 3600) return Math.floor(d/60) + 'm'; if (d < 86400) return Math.floor(d/3600) + 'h';
-        return Math.floor(d/86400) + 'd';
+        if (d < 3600) return Math.floor(d / 60) + 'm'; if (d < 86400) return Math.floor(d / 3600) + 'h';
+        return Math.floor(d / 86400) + 'd';
     }
-    function capitalize(s)  { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
-    function escRx(s)       { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
-    function esc(s)         { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
+    function escRx(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+    function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
     if (CFG.apiKey) fetchMyUsername();
     buildSettingsPanel();
