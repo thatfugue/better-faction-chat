@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Better Faction Chat – Torn.com
 // @namespace    https://torn.com/
-// @version      1.5
-// @description  Activity status, rank icons, travel icons, @mention autocomplete, fixed search, real timestamps – by sercann
+// @version      1.6
+// @description  Activity status, rank icons, travel icons, @mention autocomplete, fixed search, real timestamps, copy button toggle – by sercann
 // @author       sercann
 // @match        https://www.torn.com/*
 // @grant        GM_setValue
@@ -10,14 +10,14 @@
 // @grant        GM_addStyle
 // @run-at       document-idle
 // @license      MIT
-// @downloadURL https://update.greasyfork.org/scripts/572030/Better%20Faction%20Chat%20%E2%80%93%20Torncom.user.js
-// @updateURL https://update.greasyfork.org/scripts/572030/Better%20Faction%20Chat%20%E2%80%93%20Torncom.meta.js
+// @downloadURL  https://update.greasyfork.org/scripts/572030/Better%20Faction%20Chat%20%E2%80%93%20Torncom.user.js
+// @updateURL    https://update.greasyfork.org/scripts/572030/Better%20Faction%20Chat%20%E2%80%93%20Torncom.meta.js
 // ==/UserScript==
 
 (function () {
     'use strict';
 
-    const BFC_VERSION = '1.5';
+    const BFC_VERSION = '1.6';
     const STORE_KEY = 'bfc_settings_v2';
     const API_BASE = 'https://api.torn.com';
 
@@ -28,6 +28,7 @@
         showTimestamps: true,
         showTravelIcons: true,
         showRankIcons: true,
+        showCopyBtn: true,
         autoScroll: true,
         mentionEnabled: true,
         hideGearBtn: false,
@@ -143,9 +144,11 @@
         .bfc-ts { font-size:10px; color:#666; margin:0 8px 0 4px; font-variant-numeric:tabular-nums; display:inline-block; vertical-align:middle; pointer-events:none; font-family:monospace; }
 
         .bfc-msg-container { position:relative!important; }
-        .bfc-cp-btn { background:#2d2d2d; border:1px solid #444; border-radius:4px; color:#888; width:22px; height:22px; cursor:pointer; display:none; align-items:center; justify-content:center; flex-shrink:0; transition:all .15s; z-index:10; margin-left:6px; vertical-align:middle; position:relative; top:-1px; }
+
+        /* CSS Titreme Çözümü: opacity ve visibility kullanılarak kutu boyutu sabitlendi */
+        .bfc-cp-btn { background:#2d2d2d; border:1px solid #444; border-radius:4px; color:#888; width:22px; height:22px; cursor:pointer; display:inline-flex; visibility:hidden; opacity:0; align-items:center; justify-content:center; flex-shrink:0; transition:all .15s; z-index:10; margin-left:6px; vertical-align:middle; position:relative; top:-1px; }
         .bfc-cp-btn:hover { background:#444; color:#fff; border-color:#666; }
-        .bfc-msg-container:hover .bfc-cp-btn { display:inline-flex; }
+        .bfc-msg-container:hover .bfc-cp-btn { visibility:visible; opacity:1; }
 
         #bfc-member-popup { position:fixed; z-index:9999999; background:#0d1117; border:1px solid #21262d; border-radius:10px; box-shadow:0 8px 28px rgba(0,0,0,.7); padding:8px 0; width:270px; max-height:340px; overflow-y:auto; display:none; font-family:'Segoe UI',sans-serif; font-size:12px; }
         #bfc-member-popup.bfc-open { display:block; animation:bfc-fadein .15s ease; }
@@ -990,7 +993,15 @@
     }
 
     function injectCopy(msgEl) {
-        if (msgEl.querySelector('.bfc-cp-btn')) return;
+        const existingBtn = msgEl.querySelector('.bfc-cp-btn');
+
+        // Eğer ayarlardan copy butonu kapalıysa ekleme veya varsa kaldır.
+        if (!CFG.showCopyBtn) {
+            if (existingBtn) existingBtn.remove();
+            return;
+        }
+        if (existingBtn) return;
+
         const body = findBodyEl(msgEl);
         if (!body) return;
 
@@ -1115,7 +1126,7 @@
                     <span class="label">Detected username:</span>
                     <span class="val" id="bfc-disp-user">${esc(CFG.username) || '—'}</span>
                 </div>
-                <button id="bfc-test-btn">🔑 Test Key &amp; Auto-detect Username</button>
+                <button id="bfc-test-btn">🔑 Test Key & Auto-detect Username</button>
 
                 <hr class="bfc-div">
                 <span class="bfc-slbl">Status Polling</span>
@@ -1139,12 +1150,16 @@
                     <label class="bfc-sw"><input type="checkbox" id="s-ts"${CFG.showTimestamps ? ' checked' : ''}><span class="bfc-swt"></span></label>
                 </div>
                 <div class="bfc-row">
-                    <span>✈️ Show travel &amp; state icons</span>
+                    <span>✈️ Show travel & state icons</span>
                     <label class="bfc-sw"><input type="checkbox" id="s-travel"${CFG.showTravelIcons ? ' checked' : ''}><span class="bfc-swt"></span></label>
                 </div>
                 <div class="bfc-row">
                     <span>⚔️ Show faction rank icons</span>
                     <label class="bfc-sw"><input type="checkbox" id="s-rank"${CFG.showRankIcons ? ' checked' : ''}><span class="bfc-swt"></span></label>
+                </div>
+                <div class="bfc-row">
+                    <span>📋 Show copy message button</span>
+                    <label class="bfc-sw"><input type="checkbox" id="s-copy"${CFG.showCopyBtn ? ' checked' : ''}><span class="bfc-swt"></span></label>
                 </div>
                 <div class="bfc-row">
                     <span>⏬ Auto-scroll to newest message</span>
@@ -1160,7 +1175,7 @@
                 <p class="bfc-mention-note">When hidden, an "Open BFC Settings" button appears inside Torn's own chat settings panel (⚙ icon at the bottom of the chat).</p>
 
                 <hr class="bfc-div">
-                <span class="bfc-slbl">Status &amp; UI Colors</span>
+                <span class="bfc-slbl">Status & UI Colors</span>
                 <div class="bfc-color-row"><span>🟢 Online</span><input type="color" id="s-con" value="${CFG.statusColors.online}"></div>
                 <div class="bfc-color-row"><span>🟡 Idle</span><input type="color" id="s-cid" value="${CFG.statusColors.idle}"></div>
                 <div class="bfc-color-row"><span>⚫ Offline</span><input type="color" id="s-cof" value="${CFG.statusColors.offline}"></div>
@@ -1209,6 +1224,7 @@
             CFG.showTimestamps = document.getElementById('s-ts').checked;
             CFG.showTravelIcons = document.getElementById('s-travel').checked;
             CFG.showRankIcons = document.getElementById('s-rank').checked;
+            CFG.showCopyBtn = document.getElementById('s-copy').checked; // Yeni Eklenti
             CFG.autoScroll = document.getElementById('s-asc').checked;
             CFG.hideGearBtn = document.getElementById('s-hide').checked;
             CFG.statusColors.online = document.getElementById('s-con').value;
@@ -1243,7 +1259,7 @@
     }
     function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
     function escRx(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
-    function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    function esc(s) { return String(s).replace(/&/g, '&').replace(/"/g, '"').replace(/</g, '<').replace(/>/g, '>'); }
 
     if (CFG.apiKey) fetchMyUsername();
     buildSettingsPanel();
