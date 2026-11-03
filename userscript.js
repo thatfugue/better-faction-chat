@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Better Faction Chat – Torn.com
 // @namespace    https://torn.com/
-// @version      1.6
-// @description  Activity status, rank icons, travel icons, @mention autocomplete, fixed search, real timestamps, copy button toggle – by sercann
+// @version      1.7
+// @description  Activity status, rank icons, travel icons, @mention autocomplete, fixed search, real timestamps – by sercann
 // @author       sercann
 // @match        https://www.torn.com/*
 // @grant        GM_setValue
@@ -17,7 +17,7 @@
 (function () {
     'use strict';
 
-    const BFC_VERSION = '1.6';
+    const BFC_VERSION = '1.7';
     const STORE_KEY = 'bfc_settings_v2';
     const API_BASE = 'https://api.torn.com';
 
@@ -28,7 +28,6 @@
         showTimestamps: true,
         showTravelIcons: true,
         showRankIcons: true,
-        showCopyBtn: true,
         autoScroll: true,
         mentionEnabled: true,
         hideGearBtn: false,
@@ -142,13 +141,7 @@
         .bfc-sarrow:hover { background:#3d3d3d; color:#fff; }
 
         .bfc-ts { font-size:10px; color:#666; margin:0 8px 0 4px; font-variant-numeric:tabular-nums; display:inline-block; vertical-align:middle; pointer-events:none; font-family:monospace; }
-
         .bfc-msg-container { position:relative!important; }
-
-        /* CSS Titreme Çözümü: opacity ve visibility kullanılarak kutu boyutu sabitlendi */
-        .bfc-cp-btn { background:#2d2d2d; border:1px solid #444; border-radius:4px; color:#888; width:22px; height:22px; cursor:pointer; display:inline-flex; visibility:hidden; opacity:0; align-items:center; justify-content:center; flex-shrink:0; transition:all .15s; z-index:10; margin-left:6px; vertical-align:middle; position:relative; top:-1px; }
-        .bfc-cp-btn:hover { background:#444; color:#fff; border-color:#666; }
-        .bfc-msg-container:hover .bfc-cp-btn { visibility:visible; opacity:1; }
 
         #bfc-member-popup { position:fixed; z-index:9999999; background:#0d1117; border:1px solid #21262d; border-radius:10px; box-shadow:0 8px 28px rgba(0,0,0,.7); padding:8px 0; width:270px; max-height:340px; overflow-y:auto; display:none; font-family:'Segoe UI',sans-serif; font-size:12px; }
         #bfc-member-popup.bfc-open { display:block; animation:bfc-fadein .15s ease; }
@@ -224,8 +217,7 @@
         node.removeChild = function (child) {
             if (child && child.classList && (
                 child.classList.contains('bfc-icons-wrapper') ||
-                child.classList.contains('bfc-ts') ||
-                child.classList.contains('bfc-cp-btn')
+                child.classList.contains('bfc-ts')
             )) {
                 return child;
             }
@@ -236,8 +228,7 @@
         node.replaceChild = function (newChild, oldChild) {
             if (oldChild && oldChild.classList && (
                 oldChild.classList.contains('bfc-icons-wrapper') ||
-                oldChild.classList.contains('bfc-ts') ||
-                oldChild.classList.contains('bfc-cp-btn')
+                oldChild.classList.contains('bfc-ts')
             )) {
                 this.insertBefore(newChild, oldChild);
                 return oldChild;
@@ -887,7 +878,6 @@
 
         if (!msgEl.classList.contains('bfc-msg-container')) {
             msgEl.classList.add('bfc-msg-container');
-            injectCopy(msgEl);
         }
 
         const senderContainer = msgEl.querySelector('[class*="senderContainer__"]');
@@ -965,9 +955,6 @@
                 if (CFG.showTimestamps && !obsIsLocalMessage && !msgEl.querySelector('.bfc-ts')) {
                     injectTs(msgEl);
                 }
-                if (!msgEl.querySelector('.bfc-cp-btn')) {
-                    injectCopy(msgEl);
-                }
                 if (msgEl.dataset.bfcMentioned === '1' && !msgEl.classList.contains('bfc-mentioned')) {
                     msgEl.classList.add('bfc-mentioned');
                 }
@@ -990,36 +977,6 @@
         ts.className = 'bfc-ts'; ts.textContent = label; ts.title = 'TCT (UTC) time';
 
         body.insertAdjacentElement('afterbegin', ts);
-    }
-
-    function injectCopy(msgEl) {
-        const existingBtn = msgEl.querySelector('.bfc-cp-btn');
-
-        // Eğer ayarlardan copy butonu kapalıysa ekleme veya varsa kaldır.
-        if (!CFG.showCopyBtn) {
-            if (existingBtn) existingBtn.remove();
-            return;
-        }
-        if (existingBtn) return;
-
-        const body = findBodyEl(msgEl);
-        if (!body) return;
-
-        const btn = document.createElement('button');
-        btn.className = 'bfc-cp-btn'; btn.title = 'Copy message text';
-        const IC = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
-        const IK = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#00e676" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>';
-        btn.innerHTML = IC;
-        btn.addEventListener('click', e => {
-            e.stopPropagation();
-            const clone = body.cloneNode(true);
-            clone.querySelectorAll('.bfc-ts, .bfc-cp-btn').forEach(el => el.remove());
-            navigator.clipboard?.writeText(clone.textContent.trim()).catch(() => { });
-            btn.innerHTML = IK;
-            setTimeout(() => { btn.innerHTML = IC; }, 1400);
-        });
-
-        body.appendChild(btn);
     }
 
     let gearBtn = null;
@@ -1158,10 +1115,6 @@
                     <label class="bfc-sw"><input type="checkbox" id="s-rank"${CFG.showRankIcons ? ' checked' : ''}><span class="bfc-swt"></span></label>
                 </div>
                 <div class="bfc-row">
-                    <span>📋 Show copy message button</span>
-                    <label class="bfc-sw"><input type="checkbox" id="s-copy"${CFG.showCopyBtn ? ' checked' : ''}><span class="bfc-swt"></span></label>
-                </div>
-                <div class="bfc-row">
                     <span>⏬ Auto-scroll to newest message</span>
                     <label class="bfc-sw"><input type="checkbox" id="s-asc"${CFG.autoScroll ? ' checked' : ''}><span class="bfc-swt"></span></label>
                 </div>
@@ -1224,7 +1177,6 @@
             CFG.showTimestamps = document.getElementById('s-ts').checked;
             CFG.showTravelIcons = document.getElementById('s-travel').checked;
             CFG.showRankIcons = document.getElementById('s-rank').checked;
-            CFG.showCopyBtn = document.getElementById('s-copy').checked; // Yeni Eklenti
             CFG.autoScroll = document.getElementById('s-asc').checked;
             CFG.hideGearBtn = document.getElementById('s-hide').checked;
             CFG.statusColors.online = document.getElementById('s-con').value;
